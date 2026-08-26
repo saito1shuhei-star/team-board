@@ -1,0 +1,717 @@
+<title>Team Board — チーム作業板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --ground:#EFF2F4; --surface:#FFFFFF; --sunk:#E4E8EB;
+  --ink:#14181C; --ink-2:#3E4A54; --muted:#6E7A85;
+  --rule:#D8DEE3; --rule-2:#BFC8CF;
+  --stop:#BE3428; --stop-bg:#FBECEA; --stop-line:#E8B4AE;
+  --warn:#8A6100; --warn-bg:#FBF3DF; --warn-line:#E3CE92;
+  --go:#136B57; --go-bg:#E2F1EC; --go-line:#A9D2C6; --go-deep:#0B4437;
+  --info:#2B4A63; --info-bg:#E8EEF3; --info-line:#B4C6D4;
+  --idle:#9AA5AE; --idle-bg:#DFE4E8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1316; --surface:#171C21; --sunk:#1E252B;
+    --ink:#E7ECEF; --ink-2:#B3BEC6; --muted:#87939C;
+    --rule:#2A333A; --rule-2:#3B4750;
+    --stop:#F0705F; --stop-bg:#2C1917; --stop-line:#5A2F29;
+    --warn:#D5A63C; --warn-bg:#2A2312; --warn-line:#4C3D18;
+    --go:#5CC0A5; --go-bg:#122622; --go-line:#27453D; --go-deep:#8FD8C4;
+    --info:#9DBBD4; --info-bg:#16222C; --info-line:#2C3F4E;
+    --idle:#6C7982; --idle-bg:#252D33;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1316; --surface:#171C21; --sunk:#1E252B;
+  --ink:#E7ECEF; --ink-2:#B3BEC6; --muted:#87939C;
+  --rule:#2A333A; --rule-2:#3B4750;
+  --stop:#F0705F; --stop-bg:#2C1917; --stop-line:#5A2F29;
+  --warn:#D5A63C; --warn-bg:#2A2312; --warn-line:#4C3D18;
+  --go:#5CC0A5; --go-bg:#122622; --go-line:#27453D; --go-deep:#8FD8C4;
+  --info:#9DBBD4; --info-bg:#16222C; --info-line:#2C3F4E;
+  --idle:#6C7982; --idle-bg:#252D33;
+}
+
+*{box-sizing:border-box;}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+.mono{font-family:"Roboto Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+.wrap{max-width:940px;margin:0 auto;padding:0 20px 80px;}
+
+.demo-note{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn);
+  border-radius:4px;padding:11px 15px;margin-top:20px;font-size:13px;}
+.demo-note b{font-weight:700;}
+.demo-note a{color:inherit;}
+
+header{padding:30px 0 16px;border-bottom:2px solid var(--ink);display:flex;flex-direction:column;gap:13px;}
+.title-row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+h1{font-size:26px;font-weight:700;margin:0;letter-spacing:.02em;}
+.sub{color:var(--muted);font-size:13px;}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:11px 14px;}
+.controls label{font-size:12px;color:var(--muted);letter-spacing:.04em;}
+input[type="date"]{font-family:"Roboto Mono",monospace;font-size:14px;background:var(--sunk);
+  color:var(--ink);border:1px solid var(--rule-2);border-radius:3px;padding:5px 8px;}
+button{font-family:inherit;font-size:13px;font-weight:500;background:var(--ink);color:var(--surface);
+  border:none;border-radius:3px;padding:7px 14px;cursor:pointer;}
+button:hover{opacity:.85;}
+button.ghost{background:transparent;color:var(--ink-2);border:1px solid var(--rule-2);}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--info);outline-offset:2px;}
+details.feed{background:var(--surface);border:1px solid var(--rule);border-radius:4px;}
+details.feed>summary{cursor:pointer;padding:11px 14px;font-size:13px;font-weight:500;color:var(--ink-2);
+  list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+details.feed>summary::-webkit-details-marker{display:none;}
+details.feed>summary::after{content:"＋";color:var(--muted);}
+details.feed[open]>summary::after{content:"−";}
+.feed-body{padding:0 14px 14px;display:flex;flex-direction:column;gap:9px;}
+textarea{width:100%;min-height:100px;resize:vertical;font-family:"Roboto Mono",monospace;
+  font-size:12.5px;line-height:1.6;background:var(--sunk);color:var(--ink);
+  border:1px solid var(--rule-2);border-radius:3px;padding:10px;}
+.hint{font-size:12px;color:var(--muted);margin:0;}
+.feed-status{font-size:12.5px;color:var(--go);font-weight:500;min-height:1.2em;}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:24px;}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:2px;border-top:3px solid var(--rule-2);}
+.tile.alert{border-top-color:var(--stop);}
+.tile.warn{border-top-color:var(--warn);}
+.tile.ok{border-top-color:var(--go);}
+.tile dt{font-size:11.5px;color:var(--muted);letter-spacing:.04em;}
+.tile dd{margin:0;font-family:"Roboto Mono",monospace;font-size:30px;font-weight:700;line-height:1.15;
+  font-variant-numeric:tabular-nums;}
+.tile.alert dd{color:var(--stop);} .tile.warn dd{color:var(--warn);} .tile.ok dd{color:var(--go);}
+.tile dd small{font-size:13px;font-weight:500;margin-left:3px;}
+.tile .cap{font-size:11.5px;color:var(--muted);}
+
+section{margin-top:44px;}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:15px;flex-wrap:wrap;}
+.sec-tag{font-family:"Roboto Mono",monospace;font-size:12px;font-weight:700;width:24px;height:24px;
+  display:grid;place-items:center;border-radius:3px;background:var(--ink);color:var(--surface);flex:none;}
+.sec-head h2{font-size:19px;font-weight:700;margin:0;}
+.count{font-family:"Roboto Mono",monospace;font-size:12px;font-weight:500;background:var(--sunk);
+  color:var(--ink-2);padding:2px 9px;border-radius:99px;}
+.sec-note{font-size:12.5px;color:var(--muted);width:100%;margin:0;}
+#secB .sec-tag{background:var(--stop);} #secB .count{background:var(--stop-bg);color:var(--stop);}
+#secD .sec-tag{background:var(--go);} #secD .count{background:var(--go-bg);color:var(--go);}
+
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:16px;overflow-x:auto;}
+svg{display:block;width:100%;height:auto;min-width:520px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+
+.ms{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+.ms-item{flex:0 0 auto;min-width:132px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:4px;padding:11px 13px;display:flex;flex-direction:column;gap:1px;}
+.ms-item.past{border-left:3px solid var(--stop);}
+.ms-item.now{border-left:3px solid var(--ink);background:var(--sunk);}
+.ms-item.next{border-left:3px solid var(--warn);}
+.ms-item.far{border-left:3px solid var(--rule-2);}
+.ms-d{font-family:"Roboto Mono",monospace;font-size:12px;color:var(--muted);}
+.ms-t{font-size:13.5px;font-weight:700;}
+.ms-n{font-family:"Roboto Mono",monospace;font-size:12px;}
+.ms-item.past .ms-n{color:var(--stop);} .ms-item.next .ms-n{color:var(--warn);}
+
+.prog{display:flex;flex-direction:column;gap:12px;}
+.prow{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;}
+.pname{font-size:13.5px;font-weight:700;text-align:right;}
+.pbar{display:flex;height:26px;border-radius:3px;overflow:hidden;background:var(--sunk);}
+.pseg{display:grid;place-items:center;font-family:"Roboto Mono",monospace;font-size:11.5px;font-weight:700;
+  color:#fff;min-width:0;}
+.s0{background:var(--idle);color:var(--ink-2);} .s1{background:var(--warn);}
+.s2{background:var(--info);} .s3{background:var(--go);} .s4{background:var(--go-deep);}
+:root[data-theme="dark"] .s1,:root[data-theme="dark"] .s2,:root[data-theme="dark"] .s3,:root[data-theme="dark"] .s4{color:#0F1316;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .s1,:root:not([data-theme="light"]) .s2,
+  :root:not([data-theme="light"]) .s3,:root:not([data-theme="light"]) .s4{color:#0F1316;}}
+.dtl{margin-top:14px;}
+.dtl summary{cursor:pointer;font-size:13px;color:var(--ink-2);font-weight:500;}
+.dtl table{margin-top:10px;}
+
+.run{display:flex;flex-direction:column;gap:9px;}
+.run-item{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--go);
+  border-radius:3px;padding:12px 15px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;}
+.who{font-weight:700;font-size:14px;flex:none;}
+.what{flex:1 1 240px;color:var(--ink-2);font-size:14px;}
+.when{font-size:12px;color:var(--muted);}
+
+.stop-list{display:flex;flex-direction:column;gap:11px;}
+.stop-item{background:var(--surface);border:1px solid var(--stop-line);border-left:5px solid var(--stop);
+  border-radius:3px;padding:13px 16px;}
+.stop-top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:7px;}
+.stop-title{font-weight:700;font-size:15px;}
+.stop-title .grp{color:var(--muted);font-weight:500;font-size:13px;}
+.daybar{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.daybar .track{flex:1 1 auto;height:9px;background:var(--sunk);border-radius:99px;overflow:hidden;}
+.daybar .fill{height:100%;background:var(--stop);border-radius:99px;}
+.daybar .lbl{font-family:"Roboto Mono",monospace;font-size:13px;font-weight:700;color:var(--stop);
+  flex:none;min-width:46px;text-align:right;}
+.waits{display:inline-block;font-size:11.5px;font-weight:500;padding:2px 9px;border-radius:99px;margin-bottom:6px;}
+.w-team{background:var(--info-bg);color:var(--info);} .w-ext{background:var(--warn-bg);color:var(--warn);}
+.w-dec{background:var(--stop-bg);color:var(--stop);} .w-none{background:var(--sunk);color:var(--muted);}
+.stop-detail{font-size:13.5px;color:var(--ink-2);}
+.stop-src{font-size:11.5px;color:var(--muted);margin-top:5px;font-family:"Roboto Mono",monospace;}
+.fresh{display:inline-block;margin-top:7px;font-size:11.5px;font-weight:500;background:var(--go-bg);
+  color:var(--go);border:1px solid var(--go-line);padding:2px 9px;border-radius:99px;}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:420px;}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--rule);}
+th{font-size:11.5px;color:var(--muted);font-weight:500;letter-spacing:.06em;background:var(--sunk);}
+tr:last-child td{border-bottom:none;}
+td.num{font-family:"Roboto Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.seen-ok{color:var(--go);font-weight:500;}
+.gap{display:inline-block;height:7px;background:var(--stop);border-radius:99px;vertical-align:middle;}
+.gap.ok{background:var(--go);}
+
+.cards{display:flex;flex-direction:column;gap:13px;}
+.card{background:var(--surface);border:1px solid var(--go-line);border-top:3px solid var(--go);
+  border-radius:3px;padding:15px 17px;display:flex;flex-direction:column;gap:9px;}
+.card-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.grp-badge{font-size:11.5px;font-weight:700;background:var(--go-bg);color:var(--go);padding:2px 9px;
+  border-radius:3px;flex:none;}
+.card-head h3{font-size:15px;font-weight:700;margin:0;flex:1 1 200px;}
+.card-body{background:var(--sunk);border-radius:3px;padding:12px 14px;font-size:13.5px;color:var(--ink-2);
+  white-space:pre-wrap;line-height:1.8;}
+.card-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.why{font-size:12.5px;color:var(--muted);flex:1 1 200px;}
+.copied{font-size:12px;color:var(--go);font-weight:500;}
+
+footer{margin-top:48px;padding:18px 0 0;border-top:1px solid var(--rule);font-size:12.5px;
+  color:var(--muted);display:flex;flex-direction:column;gap:6px;}
+footer a{color:var(--info);}
+
+@media (max-width:600px){
+  .wrap{padding:0 14px 60px;} h1{font-size:21px;}
+  .prow{grid-template-columns:74px 1fr;gap:9px;} .pname{font-size:12px;}
+  .tile dd{font-size:25px;}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="title-row">
+    <h1>Team Board</h1>
+    <span class="sub">チャットの報告から自動生成する作業板／人は入力しない</span>
+  </div>
+  <div class="controls">
+    <label for="base">基準日</label>
+    <input type="date" id="base" value="2026-08-26">
+    <button class="ghost" id="today">今日にする</button>
+    <span class="sub">経過日数はこの日から計算します</span>
+  </div>
+  <details class="feed">
+    <summary><span>新しい投稿を貼って更新する</span></summary>
+    <div class="feed-body">
+      <p class="hint"><code>2026-08-27 駆動班長</code> のように「日付 役職」で始まる行を貼ると、最終登場日・経過日数・グラフの色が再計算されます。</p>
+      <textarea id="newlog" placeholder="2026-08-27 翼班長&#10;揚力分布の再計算が終わりました。抗力算出に入ります。"></textarea>
+      <div class="card-foot">
+        <button id="apply">反映する</button>
+        <button class="ghost" id="reset">元に戻す</button>
+        <span class="feed-status" id="status"></span>
+      </div>
+    </div>
+  </details>
+</header>
+
+<p class="demo-note">
+  <b>これはサンプルデータのデモです。</b>
+  架空の人力飛行機チームを想定した数値・発言に置き換えてあります。実在の団体・個人の情報は含みません。
+  自分のチームのログで動かす方法は <a href="https://github.com/saito1shuhei-star/team-board#readme">README</a> を参照してください。
+</p>
+
+<dl class="tiles" id="tiles"></dl>
+
+<section id="secM">
+  <div class="sec-head"><h2>締切</h2><p class="sec-note">基準日からの残り日数。マイナスは超過。</p></div>
+  <div class="ms" id="msList"></div>
+</section>
+
+<section id="secG">
+  <div class="sec-head">
+    <h2>班と班のつながり</h2>
+    <p class="sec-note">ログに明記されている「待ち」の関係だけを描いています。矢印は「元 → 待っている先」。丸の色は最終報告からの経過日数。</p>
+  </div>
+  <div class="panel"><svg id="graph" viewBox="0 0 880 430" role="img" aria-label="班の依存関係図"></svg></div>
+  <div class="legend">
+    <span><i style="background:var(--go)"></i>7日以内に報告あり</span>
+    <span><i style="background:var(--warn)"></i>8〜14日</span>
+    <span><i style="background:var(--stop)"></i>15日以上</span>
+    <span>—— 実線＝データの受け渡し／- - - 破線＝順番の依存</span>
+  </div>
+</section>
+
+<section id="secP">
+  <div class="sec-head">
+    <h2>進行度</h2>
+    <span class="count" id="cP"></span>
+    <p class="sec-note">
+      <b>成果物を段階で数えたものです。完成度の%ではありません。</b>
+      段階は 未着手 → 検討中 → 数値・方針あり → 図面あり → レビュー済 の5つ。
+      「図面が成果物」という考え方に合わせています。
+    </p>
+  </div>
+  <div class="panel">
+    <div class="prog" id="progList"></div>
+    <div class="legend">
+      <span><i style="background:var(--idle)"></i>未着手</span>
+      <span><i style="background:var(--warn)"></i>検討中</span>
+      <span><i style="background:var(--info)"></i>数値・方針あり</span>
+      <span><i style="background:var(--go)"></i>図面あり</span>
+      <span><i style="background:var(--go-deep)"></i>レビュー済</span>
+    </div>
+    <details class="dtl">
+      <summary>成果物ごとの内訳を見る</summary>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>班</th><th>成果物</th><th>段階</th><th>状況</th></tr></thead>
+        <tbody id="progBody"></tbody>
+      </table></div>
+    </details>
+  </div>
+</section>
+
+<section id="secA">
+  <div class="sec-head"><span class="sec-tag">A</span><h2>動いている</h2><span class="count" id="cA"></span></div>
+  <div class="run" id="runList"></div>
+</section>
+
+<section id="secB">
+  <div class="sec-head">
+    <span class="sec-tag">B</span><h2>止まっている</h2><span class="count" id="cB"></span>
+    <p class="sec-note">最後に言及があってからの経過日数が長い順。</p>
+  </div>
+  <div class="stop-list" id="stopList"></div>
+</section>
+
+<section id="secC">
+  <div class="sec-head">
+    <span class="sec-tag">C</span><h2>直近7日、報告に登場していない</h2><span class="count" id="cC"></span>
+    <p class="sec-note">ログ上での最終発言日を並べたものです。活動の有無を示すものではありません。</p>
+  </div>
+  <div class="panel" style="padding:0"><table>
+    <thead><tr><th>役職</th><th>最終発言</th><th>経過</th></tr></thead>
+    <tbody id="absentBody"></tbody>
+  </table></div>
+  <p class="sec-note" style="margin-top:10px">
+    参考：このログに記録されている発言のうち、班員（班長・PM・アドバイザー以外）によるものは<b>2件</b>です。
+  </p>
+</section>
+
+<section id="secD">
+  <div class="sec-head">
+    <span class="sec-tag">D</span><h2>今すぐ振れる調査タスク</h2><span class="count" id="cD"></span>
+    <p class="sec-note">B と C から切り出したもの。<b>他班への依存がない／判断を伴わない／調査・比較・整理</b>の3条件を満たすものだけ。そのままチャットに貼れます。</p>
+  </div>
+  <div class="cards" id="cardList"></div>
+</section>
+
+<footer>
+  <p>進捗率（%）は算出していません。本人が申告した数値以外は扱わない方針です。</p>
+  <p>「推定」と書かれた項目は、ログから直接読み取れず前後関係から補ったものです。</p>
+  <p>役職表記のみを使い、個人名は含みません。</p>
+  <p><a href="https://github.com/saito1shuhei-star/team-board">GitHub</a> — MIT License</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const BASE_DEFAULT = "2026-08-26";
+  const DAY = 86400000;
+  const $ = function(id){ return document.getElementById(id); };
+  function pd(s){ const p=String(s).split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function dd(from,to){ return Math.round((pd(to)-pd(from))/DAY); }
+  function fmt(s){ const p=String(s).split("-"); return +p[1]+"/"+ +p[2]; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  /* ===== サンプルデータ（架空） ===== */
+  const seedSeen = {
+    "フレーム班長":"2026-08-24","全体設計担当":"2026-08-21","駆動班長":"2026-08-20",
+    "プロペラ班長":"2026-08-20","アドバイザーA":"2026-08-20","アドバイザーB":"2026-08-16",
+    "翼班長":"2026-08-07","カウル班長":"2026-08-07","PM":"2026-08-04",
+    "プロペラ班員":"2026-06-22","フレーム班員":"2026-02-10"
+  };
+  const grpRole = {"翼班":"翼班長","フレーム班":"フレーム班長","駆動班":"駆動班長",
+    "プロペラ班":"プロペラ班長","カウル班":"カウル班長","全体設計":"全体設計担当"};
+
+  const nodes = [
+    {g:"翼班",       x:440, y:56 },
+    {g:"プロペラ班", x:170, y:186},
+    {g:"フレーム班", x:440, y:186},
+    {g:"全体設計",   x:712, y:186},
+    {g:"駆動班",     x:300, y:330},
+    {g:"カウル班",   x:712, y:330}
+  ];
+  const edges = [
+    {a:"翼班", b:"プロペラ班",  l:"抗力・揚力分担", dash:false},
+    {a:"翼班", b:"フレーム班",  l:"荷重条件シート", dash:false},
+    {a:"翼班", b:"全体設計",    l:"揚力分担→重心", dash:false},
+    {a:"プロペラ班", b:"駆動班", l:"プロペラ回転数", dash:false},
+    {a:"フレーム班", b:"駆動班", l:"操縦席の位置",   dash:false},
+    {a:"全体設計", b:"カウル班", l:"総組立図",       dash:false},
+    {a:"全体設計", b:"翼班",     l:"尾部アーム長",   dash:true}
+  ];
+
+  const milestones = [
+    {d:"2026-08-22", t:"全体設計 完了", n:"目標"},
+    {d:"2026-08-29", t:"製作開始", n:"予定"},
+    {d:"2026-08-30", t:"他チーム見学", n:"予定"},
+    {d:"2026-11-21", t:"OB総会", n:"骨格を見せたい"},
+    {d:"2026-12-31", t:"試作1号機", n:"年内目標"},
+    {d:"2027-07-01", t:"大会", n:"出場目標"}
+  ];
+
+  const STAGE = ["未着手","検討中","数値・方針あり","図面あり","レビュー済"];
+  const deliverables = [
+    {g:"全体設計", n:"総組立図", s:0, note:"PMの問い合わせに回答なし。アドバイザーAも8/20に着手を促している"},
+    {g:"全体設計", n:"機体重心位置", s:0, note:"8/4「出します」以降、報告なし"},
+    {g:"全体設計", n:"翼型選定", s:1, note:"候補2種を揚抗比で比較中"},
+    {g:"全体設計", n:"三面図（前年度版）", s:3, note:"2026-04-08 に提出済み"},
+
+    {g:"翼班", n:"翼面積", s:2, note:"8/21 候補翼型の最適揚抗比から算出"},
+    {g:"翼班", n:"揚力分布", s:1, note:"8/5に誤りが判明し再計算中。計算シートを改修中(1/2)"},
+    {g:"翼班", n:"揚力分担", s:0, note:"8/21「これからやる」"},
+    {g:"翼班", n:"抗力算出", s:1, note:"8/4から進行中。プロペラ班がこれを待っている"},
+    {g:"翼班", n:"尾翼系設計", s:0, note:"担当者は決定(8/5)。尾部アーム長の決定待ち"},
+
+    {g:"フレーム班", n:"搭乗姿勢", s:2, note:"8/5 現地で姿勢決定・寸法を計測"},
+    {g:"フレーム班", n:"シート成形方法", s:1, note:"3案を比較中"},
+    {g:"フレーム班", n:"主桁 計算", s:1, note:"8/24「シートを使って試算する段階」"},
+    {g:"フレーム班", n:"中央桁 計算", s:0, note:"主桁の計算待ち"},
+    {g:"フレーム班", n:"胴体桁 計算", s:0, note:"中央桁の計算待ち"},
+    {g:"フレーム班", n:"モックアップ設計", s:0, note:"成形方法の決定待ち"},
+
+    {g:"駆動班", n:"設計手順（8ステップ）", s:4, note:"8/3提出 → アドバイザーBがレビュー"},
+    {g:"駆動班", n:"入力軸の軸径", s:1, note:"20mmに決定 → アドバイザーAから再検討の指摘"},
+    {g:"駆動班", n:"歯車の選定・保持方法", s:2, note:"市販ベベルギアで仮決め"},
+    {g:"駆動班", n:"軸受の選定", s:2, note:"8/4完了。図面化して工作室へ（結果未報告）"},
+    {g:"駆動班", n:"ギアボックス筐体", s:0, note:"8/7に決定予定だったが報告なし"},
+    {g:"駆動班", n:"スプロケット歯数比", s:1, note:"8/20から設計中"},
+    {g:"駆動班", n:"シャフト長さ", s:0, note:"操縦席位置の決定待ち"},
+
+    {g:"プロペラ班", n:"製法（木材削り出し）", s:4, note:"8/11 アドバイザーAの助言を受けて決定"},
+    {g:"プロペラ班", n:"設計値 8.0m/s・22N・200W", s:2, note:"仮置き。機体抗力が出たら見直す"},
+    {g:"プロペラ班", n:"プロペラ3Dデータ", s:3, note:"1.8m / 1.6m の2案を提出済み"},
+    {g:"プロペラ班", n:"桁計算・たわみ計算", s:1, note:"進行中。結果次第で材質を再検討"},
+    {g:"プロペラ班", n:"回転試験", s:0, note:"未着手"},
+
+    {g:"カウル班", n:"方針（フィルム張り）", s:2, note:"8/1決定、8/20にアドバイザーAが追認"},
+    {g:"カウル班", n:"形状設計", s:0, note:"総組立図が出るまで着手しない方針"},
+    {g:"カウル班", n:"模型製作", s:0, note:"8/9開始予定。以降の報告なし"},
+    {g:"カウル班", n:"資材発注", s:0, note:"発注先・数量とも未定"}
+  ];
+
+  const running = [
+    {who:"フレーム班長", what:"主桁 → 中央桁 → 胴体桁 の計算（荷重条件シートで試算中）", from:"2026-08-04", last:"2026-08-24"},
+    {who:"全体設計担当", what:"翼型選定と揚力分担（候補2種を揚抗比で比較）", from:"2026-08-20", last:"2026-08-21"},
+    {who:"駆動班長", what:"スプロケット歯数比・ギア比の設計（プロペラ2案の両対応）", from:"2026-08-20", last:"2026-08-20"}
+  ];
+
+  const stopped = [
+    {grp:"駆動班", role:"駆動班長", title:"入力軸の軸径の再検討", since:"2026-08-04", wait:"dec",
+     waitLabel:"判断待ち：駆動班長",
+     detail:"8/4にアドバイザーAから「その出力と回転数に対して軸径が太すぎる」「他チームの実例から採寸してみては」と指摘。以降、この件への回答は記録されていません。",
+     src:"#駆動班 2026-08-04"},
+    {grp:"駆動班", role:"駆動班長", title:"図面を工作室で確認", since:"2026-08-04", wait:"ext",
+     waitLabel:"外部待ち：工作室",
+     detail:"「寸法を図面に描き起こして工作室に見せに行きます」以降、結果の報告がありません。",
+     src:"#駆動班 2026-08-04"},
+    {grp:"プロペラ班", role:"プロペラ班長", title:"吸収出力 200W の確定", since:"2026-08-04", wait:"team",
+     waitLabel:"他班待ち：翼班の抗力算出",
+     detail:"「他班の抗力が出ないと推力が出せません」として200Wで仮置き。翼班の抗力算出が止まっているため確定できません。<b>見直し条件が記録されていません。</b>",
+     src:"#相談・質問（プロペラ班） 2026-08-04"},
+    {grp:"翼班", role:"翼班長", title:"重心位置の算出", since:"2026-08-04", wait:"none",
+     waitLabel:"放置：誰も言及していない",
+     detail:"「重心位置を出します」と回答したまま結果の報告がありません。尾翼・尾部アーム長の決定がこれを待っています。",
+     src:"#相談・質問（翼班） 2026-08-04"},
+    {grp:"全体設計", role:"全体設計担当", title:"総組立図", since:"2026-08-04", wait:"dec",
+     waitLabel:"判断待ち：全体設計担当",
+     detail:"PMが8/3・8/4に「現状／必要なもの／完了見込み」を質問、回答が記録されていません。8/20にアドバイザーAが改めて着手を促しています。<b>8/22の目標を超過しています。</b>",
+     src:"#全体設計 2026-08-03〜04"},
+    {grp:"翼班", role:"翼班長", title:"揚力分布の再計算・抗力算出・尾翼系設計・主翼解析", since:"2026-08-07", wait:"none",
+     waitLabel:"放置：誰も言及していない",
+     detail:"8/5に「数値に誤りあり、大幅な修正が必要」「期間は数日かと」と報告。8/6「計算シートを改修中(1/2完了)」以降、進捗の記録がありません。<b>プロペラ班・フレーム班・全体設計がこの結果を待っています。</b>",
+     src:"#翼班 2026-08-07"},
+    {grp:"駆動班", role:"駆動班長", title:"ギアボックス筐体の決定", since:"2026-08-07", wait:"none",
+     waitLabel:"放置：予定日を超過",
+     detail:"8/5に「明日、明後日で筐体の構造を決定します」＝8/7予定。8/20の報告に言及がありません。",
+     src:"#駆動班 2026-08-05（予定日 8/7）"},
+    {grp:"カウル班", role:"カウル班長", title:"模型製作・資材発注", since:"2026-08-07", wait:"team",
+     waitLabel:"他班待ち：全体設計の総組立図",
+     detail:"8/9から模型製作開始の予定。8/20にアドバイザーAが「機体レイアウトが図面として固まってから」と保留を助言。<b>総組立図が出るまで動けません。</b>",
+     src:"#カウル班 2026-08-07"},
+    {grp:"翼班", role:"翼班長", title:"計算結果の図示", since:"2026-08-10", wait:"dec",
+     waitLabel:"判断待ち：翼班の回答",
+     detail:"アドバイザーBから「計算結果は見直してどうなった？ 図にできる？」との質問。回答が記録されていません。",
+     src:"#相談・質問（翼班） 2026-08-10"},
+    {grp:"翼班", role:"アドバイザーB", title:"揚力線理論の計算用シート", since:"2026-08-16", wait:"ext",
+     waitLabel:"外部待ち：アドバイザーB",
+     detail:"「昔作ったものを探してみる」以降、続報がありません。<span class='mono'>推定</span>：リマインドすれば動く可能性があります。",
+     src:"#雑談（翼班） 2026-08-16"},
+    {grp:"フレーム班", role:"フレーム班長", title:"計算方法の資料共有", since:"2026-08-24", wait:"ext",
+     waitLabel:"外部待ち：ファイル容量の問題",
+     detail:"「紙の資料をファイルにして共有しようとしたが、容量がうまく小さくできない」。技術的な理由で止まっています。",
+     src:"#フレーム班 2026-08-24"}
+  ];
+
+  const tasks = [
+    {grp:"駆動班", title:"他チームの歯車・軸保持構造を採寸する",
+     why:"軸径が太すぎるという指摘（8/4）に、数字で答えるため",
+     body:"【調査のお願い／駆動班】\n① 交流会の資料と写真から、他チームの「クランク間に収めた歯車と軸保持構造」の寸法を読み取ってください。\n② 軸径が太すぎるという指摘をもらっていて、他チームの実例と比べる材料が要ります。\n③ 手描きのスケッチに寸法を書き込んだものと、出典（資料名・ページ）をセットでお願いします。\n④ 8/29(土)まで"},
+    {grp:"駆動班", title:"他チームのギアボックス筐体を3例集めて比較する",
+     why:"筐体の構造決定が8/7予定のまま止まっているため",
+     body:"【調査のお願い／駆動班】\n① 交流会の資料から、他チームのギアボックス筐体の構造を3例ぶん集めてください。\n② うちの筐体構造をこれから決めるので、選択肢を並べる材料が要ります。\n③ 比較表にしてください。列は「チーム名／構造／材質／固定方法／わかれば重量／出典」。\n④ 8/29(土)まで"},
+    {grp:"駆動班", title:"歯車の伝達効率の文献値を集める",
+     why:"「ベベルギア2枚で大きな損失もありうる」との指摘に、数字で当たるため",
+     body:"【調査のお願い／駆動班】\n① 平歯車・ベベルギア・スパイラルベベルギアそれぞれの伝達効率の一般値を、出典つきで集めてください。\n② 想定出力に対して伝達損失が何Wになるかを見積もる必要があります。\n③ 出典URLつきの箇条書きで。数字に幅がある場合はそのまま書いてください。\n④ 8/31(月)まで"},
+    {grp:"翼班", title:"候補翼型2種のデータを並べた表を作る",
+     why:"どちらを採用するか揚抗比で比較する材料になるため",
+     body:"【調査のお願い／翼班】\n① 翼型データベースから候補2種のデータを取ってきて、1枚の表にしてください。\n② 翼型をこの2つから選ぶところなので、横に並べて見たいです。\n③ 列は「翼型／レイノルズ数／最大揚抗比／そのときの迎角／最大揚力係数／後縁の厚み／出典URL」。判断は不要で、数字の転記だけでOKです。\n④ 8/29(土)まで"},
+    {grp:"フレーム班", title:"シート成形方法3案を比較する",
+     why:"成形方法の決定が、モックアップ設計の前提になっているため",
+     body:"【調査のお願い／フレーム班】\n① シートの成形方法として挙がっている3案を調べて比較してください。\n② どれで型を取るか決めないと、その先の寸法確認とモックアップ設計に進めません。\n③ 比較表で。列は「方法／必要な材料と入手先／概算費用／作業時間／やり直しがきくか／必要な設備」。\n④ 8/30(日)まで"},
+    {grp:"プロペラ班", title:"他チームのプロペラ重量の実測値を集める",
+     why:"木材削り出しの重量目標を置くため",
+     body:"【調査のお願い／プロペラ班】\n① 他チームのプロペラの重量を、材質と直径とセットで集めてください。交流会の記録や各チームのSNSが情報源になります。\n② 製法が決まったので、狙う重量の目安が要ります。\n③ 表で。列は「チーム名／材質／直径／重量／出典」。\n④ 8/31(月)まで"},
+    {grp:"カウル班", title:"参考機体3種の構造資料を集める",
+     why:"フィルム張りで行くにあたり、実例の骨組みを把握するため",
+     body:"【調査のお願い／カウル班】\n① 参考にすると決めた機体3種について、操縦席まわりの写真と構造がわかる資料を集めてください。\n② フィルム張りで行く方針なので、実例の骨組みの組み方を見ておきたいです。※製作方法の議論は総組立図が出てからですが、資料集めは先に進められます。\n③ 機体ごとに1枚。「写真／骨組みの構成／フレームへの固定方法／出典」。\n④ 8/31(月)まで"},
+    {grp:"フレーム班", title:"大きいPDFを軽くする方法を調べる",
+     why:"計算方法の資料が、容量が理由で共有できていないため",
+     body:"【調査のお願い／フレーム班】\n① 手書きの紙をスキャンしたPDFのファイルサイズを小さくする方法を調べてください。\n② 計算方法をまとめた資料が容量オーバーで上げられず、班の中で共有できていません。\n③ 手順を3行くらいで。使うツール名（スマホアプリでもWebでも可）まで書いてください。\n④ 8/27(木)まで"}
+  ];
+  /* ===== ここまでサンプルデータ ===== */
+
+  let seen = Object.assign({}, seedSeen);
+  let base = BASE_DEFAULT;
+  const waitClass = {team:"w-team", ext:"w-ext", dec:"w-dec", none:"w-none"};
+
+  function grpDays(g){ const r = grpRole[g]; return (r && seen[r]) ? dd(seen[r], base) : 999; }
+  function grpColor(g){ const d = grpDays(g); return d <= 7 ? "var(--go)" : (d <= 14 ? "var(--warn)" : "var(--stop)"); }
+  function downstream(g){
+    const out = new Set(); const stack = [g];
+    while (stack.length){
+      const cur = stack.pop();
+      edges.forEach(function(e){
+        if (e.a === cur && !e.dash && !out.has(e.b) && e.b !== g){ out.add(e.b); stack.push(e.b); }
+      });
+    }
+    return out.size;
+  }
+
+  function renderTiles(){
+    const toBuild = dd(base, "2026-08-29");
+    const over = dd("2026-08-22", base);
+    const drawn = deliverables.filter(function(d){ return d.s >= 3; }).length;
+    $("tiles").innerHTML = [
+      {cls: toBuild <= 3 ? "alert" : "warn", dt:"製作開始まで",
+       v: toBuild >= 0 ? toBuild : "超過", u: toBuild >= 0 ? "日" : "", cap:"2026-08-29 予定"},
+      {cls: over > 0 ? "alert" : "ok", dt:"全体設計の目標",
+       v: over > 0 ? "+"+over : over, u:"日", cap: over>0 ? "8/22 の目標を超過" : "8/22 まで"},
+      {cls:"alert", dt:"止まっている案件", v: stopped.length, u:"件",
+       cap:"最長 "+Math.max.apply(null, stopped.map(function(s){return dd(s.since, base);}))+"日"},
+      {cls:"warn", dt:"図面まで到達した成果物", v: drawn, u:"/ "+deliverables.length,
+       cap:"残り "+(deliverables.length-drawn)+"件は図面前"}
+    ].map(function(t){
+      return '<div class="tile '+t.cls+'"><dt>'+t.dt+'</dt><dd>'+t.v+'<small>'+t.u+'</small></dd><span class="cap">'+t.cap+'</span></div>';
+    }).join("");
+  }
+
+  function renderMs(){
+    $("msList").innerHTML = milestones.map(function(m){
+      const n = dd(base, m.d);
+      let cls = "far", label;
+      if (n < 0){ cls = "past"; label = Math.abs(n)+"日 超過"; }
+      else if (n === 0){ cls = "now"; label = "今日"; }
+      else if (n <= 7){ cls = "next"; label = "あと "+n+"日"; }
+      else { label = "あと "+n+"日"; }
+      return '<div class="ms-item '+cls+'"><span class="ms-d">'+m.d.slice(5).replace("-","/")+'</span>'
+        + '<span class="ms-t">'+esc(m.t)+'</span><span class="ms-n">'+label+'</span>'
+        + '<span class="ms-d">'+esc(m.n)+'</span></div>';
+    }).join("");
+  }
+
+  function renderGraph(){
+    const pos = {}; nodes.forEach(function(n){ pos[n.g] = n; });
+    let s = '<defs>'
+      + '<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+      + '<path d="M0,0 L10,5 L0,10 z" fill="var(--rule-2)"/></marker>'
+      + '<marker id="ard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+      + '<path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>';
+    const R = 46;
+    edges.forEach(function(e){
+      const A = pos[e.a], B = pos[e.b];
+      const dx = B.x-A.x, dy = B.y-A.y, len = Math.sqrt(dx*dx+dy*dy);
+      const ux = dx/len, uy = dy/len;
+      const x1 = A.x+ux*R, y1 = A.y+uy*R, x2 = B.x-ux*(R+9), y2 = B.y-uy*(R+9);
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      s += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" '
+        + 'stroke="'+(e.dash?"var(--muted)":"var(--rule-2)")+'" stroke-width="'+(e.dash?1.5:2.5)+'" '
+        + (e.dash?'stroke-dasharray="5 4" ':'') + 'marker-end="url(#'+(e.dash?"ard":"ar")+')"/>';
+      s += '<rect x="'+(mx-46)+'" y="'+(my-10)+'" width="92" height="20" rx="3" fill="var(--surface)" opacity="0.92"/>';
+      s += '<text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="11.5" fill="var(--muted)" '
+        + 'font-family="Zen Kaku Gothic New, sans-serif">'+esc(e.l)+'</text>';
+    });
+    nodes.forEach(function(n){
+      const d = grpDays(n.g), col = grpColor(n.g);
+      const cnt = stopped.filter(function(x){ return x.grp === n.g; }).length;
+      const down = downstream(n.g);
+      s += '<circle cx="'+n.x+'" cy="'+n.y+'" r="'+R+'" fill="var(--surface)" stroke="'+col+'" stroke-width="3.5"/>';
+      s += '<text x="'+n.x+'" y="'+(n.y-6)+'" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)" '
+        + 'font-family="Zen Kaku Gothic New, sans-serif">'+esc(n.g)+'</text>';
+      s += '<text x="'+n.x+'" y="'+(n.y+13)+'" text-anchor="middle" font-size="12" fill="'+col+'" '
+        + 'font-family="Roboto Mono, monospace" font-weight="700">'+d+'日</text>';
+      if (cnt > 0){
+        s += '<circle cx="'+(n.x+R-6)+'" cy="'+(n.y-R+8)+'" r="13" fill="var(--stop)"/>';
+        s += '<text x="'+(n.x+R-6)+'" y="'+(n.y-R+13)+'" text-anchor="middle" font-size="12" font-weight="700" '
+          + 'fill="#fff" font-family="Roboto Mono, monospace">'+cnt+'</text>';
+      }
+      if (down >= 3){
+        s += '<text x="'+n.x+'" y="'+(n.y-R-10)+'" text-anchor="middle" font-size="11.5" font-weight="700" '
+          + 'fill="var(--stop)" font-family="Zen Kaku Gothic New, sans-serif">止まると '+down+'班に波及</text>';
+      }
+    });
+    s += '<text x="14" y="418" font-size="11.5" fill="var(--muted)" font-family="Zen Kaku Gothic New, sans-serif">'
+      + '赤丸の数字＝その班で止まっている案件の数</text>';
+    $("graph").innerHTML = s;
+  }
+
+  function renderProg(){
+    const groups = ["全体設計","翼班","フレーム班","駆動班","プロペラ班","カウル班"];
+    $("progList").innerHTML = groups.map(function(g){
+      const items = deliverables.filter(function(d){ return d.g === g; });
+      const counts = [0,0,0,0,0];
+      items.forEach(function(d){ counts[d.s]++; });
+      const segs = counts.map(function(c, i){
+        if (!c) return "";
+        return '<div class="pseg s'+i+'" style="flex:'+c+' 1 0" title="'+STAGE[i]+' '+c+'件">'+c+'</div>';
+      }).join("");
+      return '<div class="prow"><div class="pname">'+esc(g)+'<br><span class="sub mono">'+items.length+'件</span></div>'
+        + '<div class="pbar">'+segs+'</div></div>';
+    }).join("");
+    const drawn = deliverables.filter(function(d){ return d.s >= 3; }).length;
+    $("cP").textContent = "成果物 "+deliverables.length+"件中 図面あり以上 "+drawn+"件";
+    $("progBody").innerHTML = deliverables.map(function(d){
+      return '<tr><td>'+esc(d.g)+'</td><td>'+esc(d.n)+'</td>'
+        + '<td><span class="waits" style="background:var(--sunk);color:var(--ink-2)">'+STAGE[d.s]+'</span></td>'
+        + '<td style="color:var(--muted);font-size:12.5px">'+esc(d.note)+'</td></tr>';
+    }).join("");
+  }
+
+  function renderA(){
+    $("runList").innerHTML = running.map(function(r){
+      return '<div class="run-item"><span class="who">'+esc(r.who)+'</span>'
+        + '<span class="what">'+esc(r.what)+'</span>'
+        + '<span class="when mono">'+fmt(r.from)+' 開始 ／ 最終更新 '+fmt(r.last)+'（'+dd(r.last, base)+'日前）</span></div>';
+    }).join("");
+    $("cA").textContent = running.length+"件";
+  }
+
+  function renderB(){
+    const rows = stopped.map(function(s){ return Object.assign({}, s, {days: dd(s.since, base)}); })
+      .sort(function(a,b){ return b.days - a.days; });
+    const max = Math.max.apply(null, rows.map(function(r){ return r.days; })) || 1;
+    $("stopList").innerHTML = rows.map(function(s){
+      let fresh = "";
+      const last = seen[s.role];
+      if (last && dd(s.since, last) > 0){
+        fresh = '<span class="fresh">'+esc(s.role)+' に '+fmt(last)+' の新しい発言があります（この件かどうかは要確認）</span>';
+      }
+      const pct = Math.max(4, Math.round(s.days / max * 100));
+      return '<div class="stop-item">'
+        + '<div class="stop-top"><span class="stop-title">'+esc(s.title)+' <span class="grp">／ '+esc(s.grp)+'</span></span></div>'
+        + '<div class="daybar"><div class="track"><div class="fill" style="width:'+pct+'%"></div></div>'
+        + '<span class="lbl">'+s.days+'日</span></div>'
+        + '<span class="waits '+waitClass[s.wait]+'">'+esc(s.waitLabel)+'</span>'
+        + '<div class="stop-detail">'+s.detail+'</div>'
+        + '<div class="stop-src">'+esc(s.src)+'</div>'+fresh+'</div>';
+    }).join("");
+    $("cB").textContent = rows.length+"件";
+  }
+
+  function renderC(){
+    const list = Object.keys(seen).map(function(k){
+      return {role:k, last:seen[k], days:dd(seen[k], base)};
+    }).sort(function(a,b){ return b.days - a.days; });
+    const max = Math.max.apply(null, list.map(function(x){ return x.days; })) || 1;
+    $("absentBody").innerHTML = list.map(function(x){
+      const ok = x.days <= 7;
+      const w = Math.max(3, Math.round(x.days / max * 120));
+      return '<tr><td>'+esc(x.role)+'</td><td class="num">'+esc(x.last)+'</td>'
+        + '<td class="num'+(ok?' seen-ok':'')+'">'
+        + '<span class="gap'+(ok?' ok':'')+'" style="width:'+w+'px"></span> '
+        + x.days+'日'+(ok?'（7日以内）':'')+'</td></tr>';
+    }).join("");
+    $("cC").textContent = list.filter(function(x){ return x.days > 7; }).length+"名";
+  }
+
+  function renderD(){
+    $("cardList").innerHTML = tasks.map(function(t, i){
+      return '<div class="card"><div class="card-head"><span class="grp-badge">'+esc(t.grp)+'</span>'
+        + '<h3>'+esc(t.title)+'</h3></div>'
+        + '<div class="card-body" id="body'+i+'">'+esc(t.body)+'</div>'
+        + '<div class="card-foot"><span class="why">'+esc(t.why)+'</span>'
+        + '<button data-copy="'+i+'">依頼文をコピー</button><span class="copied" id="ok'+i+'"></span></div></div>';
+    }).join("");
+    $("cD").textContent = tasks.length+"件";
+  }
+
+  function renderAll(){
+    renderTiles(); renderMs(); renderGraph(); renderProg();
+    renderA(); renderB(); renderC(); renderD();
+  }
+
+  document.addEventListener("click", function(e){
+    const btn = e.target.closest && e.target.closest("button[data-copy]");
+    if (!btn) return;
+    const i = btn.getAttribute("data-copy");
+    const ok = $("ok"+i);
+    function done(m){ ok.textContent = m; setTimeout(function(){ ok.textContent=""; }, 2600); }
+    function fallback(){
+      try{
+        const r = document.createRange(); r.selectNodeContents($("body"+i));
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        done("選択しました。Ctrl+C でコピー");
+      }catch(err){ done("上の文面を手動でコピーしてください"); }
+    }
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(tasks[+i].body).then(function(){ done("コピーしました"); }).catch(fallback);
+      } else fallback();
+    }catch(err){ fallback(); }
+  });
+
+  $("base").addEventListener("change", function(){ base = this.value || BASE_DEFAULT; renderAll(); });
+  $("today").addEventListener("click", function(){
+    const n = new Date();
+    const s = n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0");
+    $("base").value = s; base = s; renderAll();
+  });
+  $("apply").addEventListener("click", function(){
+    const re = /^\s*(\d{4}-\d{2}-\d{2})\s+(\S+)/;
+    let n = 0, newest = null;
+    $("newlog").value.split("\n").forEach(function(line){
+      const m = line.match(re); if (!m) return;
+      const d = m[1], role = m[2];
+      if (!seen[role] || pd(d) > pd(seen[role])) seen[role] = d;
+      if (!newest || pd(d) > pd(newest)) newest = d;
+      n++;
+    });
+    if (!n){ $("status").textContent = "「YYYY-MM-DD 役職」で始まる行が見つかりませんでした"; return; }
+    if (newest && pd(newest) > pd(base)){ $("base").value = newest; base = newest; }
+    renderAll(); $("status").textContent = n+"件を反映しました";
+  });
+  $("reset").addEventListener("click", function(){
+    seen = Object.assign({}, seedSeen); base = BASE_DEFAULT;
+    $("base").value = BASE_DEFAULT; $("newlog").value = "";
+    $("status").textContent = "元に戻しました"; renderAll();
+  });
+
+  renderAll();
+})();
+</script>
