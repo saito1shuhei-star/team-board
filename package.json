@@ -1,0 +1,18 @@
+{
+  "name": "team-board",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "チャットの進捗報告から、止まっている案件・空いている人・今すぐ振れる仕事を1枚に映す作業板",
+  "scripts": {
+    "start": "node server.mjs",
+    "sync": "node scripts/sync-discord.mjs"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

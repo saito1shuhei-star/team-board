@@ -658,13 +658,15 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--rule);font-si
     $("newlog").value=""; $("status").textContent="元に戻しました"; renderAll();
   });
 
-  /* ---- 自動取得（ポーリング）---- */
-  var POLL_URL="log.txt", POLL_MS=10000, pollOn=true, pollTimer=null, lastSig="";
+  /* ---- 自動取得 ----
+     ① サーバー（server.mjs）が居れば SSE で push 受信 = 投稿した瞬間に反映
+     ② 居なければ log.txt を10秒ごとにポーリング（静的ホスティング用）
+     ③ どちらも駄目なら手動貼り付け                                     */
+  var POLL_URL="log.txt", POLL_MS=10000, pollOn=true, pollTimer=null, lastSig="", es=null, mode="";
   function setPoll(t,cls){ var e=$("pollStat"); if(!e)return; e.textContent=t; e.className="pollstat "+(cls||""); }
   function applyLogText(txt){
     var re=/^\s*(\d{4}-\d{2}-\d{2})\s+(\S+)/, newest=null, changed=false;
-    txt.split("
-").forEach(function(line){
+    txt.split(/\r?\n/).forEach(function(line){
       var m=line.match(re); if(!m) return;
       if(!seen[m[2]] || pd(m[1])>pd(seen[m[2]])){ seen[m[2]]=m[1]; changed=true; }
       if(!newest || pd(m[1])>pd(newest)) newest=m[1];
@@ -691,13 +693,54 @@ footer{margin-top:26px;padding-top:12px;border-top:1px solid var(--rule);font-si
       setPoll("○ データ元に接続できません（貼り付けで更新）","off");
     });
   }
+  /* ---- SSE（サーバーが居るとき）---- */
+  function applyState(st){
+    var changed=false, newest=null;
+    Object.keys(st.seen||{}).forEach(function(role){
+      var d=st.seen[role];
+      if(!seen[role] || pd(d)>pd(seen[role])){ seen[role]=d; changed=true; }
+      if(!newest || pd(d)>pd(newest)) newest=d;
+    });
+    if(newest && pd(newest)>pd(base)){ base=newest; $("base").value=newest; changed=true; }
+    return changed;
+  }
+  function flash(){
+    var w=document.querySelector(".wrap");
+    w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash");
+  }
+  function startSSE(){
+    if(typeof EventSource==="undefined"){ startPolling(); return; }
+    try{ es=new EventSource("/api/stream"); }catch(e){ startPolling(); return; }
+    var opened=false;
+    es.onopen=function(){ opened=true; mode="sse"; setPoll("● Discord接続中（即時反映）","live"); };
+    es.onmessage=function(ev){
+      var st; try{ st=JSON.parse(ev.data); }catch(e){ return; }
+      var now=new Date().toTimeString().slice(0,8);
+      if(applyState(st)){ renderAll(); flash(); setPoll("● 更新を反映 "+now,"live"); }
+      else setPoll((st.connected?"● Discord接続中":"○ Discord切断中")+" "+now, st.connected?"live":"off");
+    };
+    es.onerror=function(){
+      es.close(); es=null;
+      if(!opened){ startPolling(); }            // サーバーが居ない → ファイル方式へ
+      else { setPoll("○ 接続が切れました。再接続します","off"); setTimeout(startSSE,5000); }
+    };
+  }
+  function startPolling(){
+    mode="poll";
+    poll(); clearInterval(pollTimer); pollTimer=setInterval(poll,POLL_MS);
+  }
+
   $("pollToggle").addEventListener("click",function(){
     pollOn=!pollOn; this.textContent="自動更新 "+(pollOn?"ON":"OFF");
-    if(pollOn){ poll(); pollTimer=setInterval(poll,POLL_MS); }
-    else { clearInterval(pollTimer); setPoll("自動更新 停止中",""); }
+    if(pollOn){ if(mode==="sse") startSSE(); else startPolling(); }
+    else {
+      clearInterval(pollTimer);
+      if(es){ es.close(); es=null; }
+      setPoll("自動更新 停止中","");
+    }
   });
 
   renderAll();
-  poll(); pollTimer=setInterval(poll,POLL_MS);
+  startSSE();
 })();
 </script>
