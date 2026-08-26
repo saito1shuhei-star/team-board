@@ -1,0 +1,3 @@
+# 実際の設定（チャンネルID・ユーザーIDが入る）はコミットしない
+sync.config.json
+node_modules/

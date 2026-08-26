@@ -98,10 +98,67 @@ Cは「余力あり」「稼働なし」とは書きません。「直近7日、
 
 ---
 
+## Discord からの自動同期（GitHub Actions）
+
+`log.txt` を15分ごとに自動更新する仕組みが入っています。**サーバーは不要**です。
+
+```
+GitHub Actions（15分ごと）
+  → Discord API でチャンネルのメッセージを取得
+  → log.txt を書き換え
+  → 変更があればコミット
+  → Pages が再ビルド
+  → 開いている板が10秒以内に自動で拾う
+```
+
+### 個人情報を出さない設計
+
+公開リポジトリなので、既定では **`日付` と `役職` しか書き出しません**。本文もDiscordの表示名も出ません。
+板のポーリングは `YYYY-MM-DD 役職` の行しか読んでいないので、これで動きます。
+
+- Discordのユーザー ID → 役職名 の対応表（`sync.config.json` の `roles`）で置き換える
+- 対応表に無い人は `メンバー` になる（実名は出ない）
+- 本文を含めたい場合は `includeBody: true`。ただし **その場合はリポジトリを private にしてください**
+- メンションと URL は自動で除去される
+
+### 設定手順
+
+自分でやる必要があるのは次の4つです。**トークンは誰にも渡さず、GitHubの画面から直接登録してください。**
+
+**1. Bot を作る**
+[Discord Developer Portal](https://discord.com/developers/applications) → New Application → Bot → Reset Token でトークンを取得。
+Bot の設定で **Message Content Intent を ON** にする。
+
+**2. Bot をサーバーに招待する**（サーバー管理者の権限が必要）
+OAuth2 → URL Generator → scope に `bot`、権限に `View Channels` と `Read Message History` だけを選ぶ。
+生成された URL を開いて招待する。**それ以外の権限は付けないこと。**
+
+**3. トークンを GitHub に登録する**
+リポジトリの Settings → Secrets and variables → Actions → New repository secret
+- Name: `DISCORD_BOT_TOKEN`
+- Secret: 手順1で取得したトークン
+
+**4. 設定ファイルを作る**
+```bash
+cp sync.config.example.json sync.config.json
+```
+`channels` に読み取るチャンネルのIDを、`roles` にユーザーIDと役職の対応を書く。
+チャンネルIDは、Discordでそのチャンネルを開いたときのURL末尾の数字。
+ユーザーIDは、開発者モードをONにして相手を右クリック →「ユーザーIDをコピー」。
+
+> `sync.config.json` は `.gitignore` に入っています。チャンネルIDやユーザーIDが公開されないためです。
+> Actions で使う場合は、このファイルの中身を Secret（例: `SYNC_CONFIG`）に入れてワークフローで書き出すか、
+> リポジトリを private にしてコミットしてください。
+
+### 動作確認
+
+Actions タブ → Sync Discord to log.txt → Run workflow で手動実行できます。
+トークンが未設定でも**エラーにはならず**、`log.txt` はそのまま残ります。
+
 ## 今後やるなら
 
-- Discord Bot での自動取得・自動更新（Bot追加権限とMessage Content Intentが必要）
-- 止まっている日数が閾値を超えたら該当班にメンション
+- 同じ Actions から Claude API を呼び、「止まっている案件」「振れる仕事」も自動で作り直す
+- 止まっている日数が閾値を超えたら該当班にDiscordで通知
 - 班員側から「取りに行ける」タスクボード
 
 ---

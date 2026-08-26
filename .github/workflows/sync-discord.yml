@@ -1,0 +1,42 @@
+name: Sync Discord to log.txt
+
+on:
+  schedule:
+    # 15分ごと。GitHub の都合で数分ずれることがあります。
+    - cron: "*/15 * * * *"
+  workflow_dispatch:        # 手動でも実行できるようにする
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-discord
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Discord から取得して log.txt を更新
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: node scripts/sync-discord.mjs
+
+      - name: 変更があればコミット
+        run: |
+          if [ -n "$(git status --porcelain log.txt)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add log.txt
+            git commit -m "chore: sync log.txt from Discord"
+            git push
+            echo "更新をコミットしました"
+          else
+            echo "変更なし"
+          fi
