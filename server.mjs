@@ -79,6 +79,7 @@ function clean(text) {
 
 const state = {
   seen: {},          // 役職 → 最終発言日 YYYY-MM-DD
+  groups: {},        // 班名 → その班の最終投稿日 YYYY-MM-DD（板が使うのはこちら）
   messages: [],      // 新しい順に最大500件
   connected: false,
   lastEventAt: null
@@ -94,11 +95,16 @@ function record(msg) {
   if (!channels.has(msg.channelId)) return false;
 
   const role = toRole(msg.author, msg.member);
+  const group = channels.get(msg.channelId) || "";
   const date = ymd(msg.createdTimestamp);
   let changed = false;
 
   if (!state.seen[role] || date > state.seen[role]) {
     state.seen[role] = date;
+    changed = true;
+  }
+  if (group && (!state.groups[group] || date > state.groups[group])) {
+    state.groups[group] = date;
     changed = true;
   }
 
@@ -129,6 +135,7 @@ function broadcast() {
 
 function snapshot() {
   return {
+    groups: state.groups,   // 板はこれを見て「記録が古い可能性」を判定する
     seen: state.seen,
     connected: state.connected,
     lastEventAt: state.lastEventAt,
